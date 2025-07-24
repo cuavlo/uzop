@@ -1,5 +1,1 @@
 streamlit
-openai-whisper
-pytube
-moviepy
-ffmpeg-python

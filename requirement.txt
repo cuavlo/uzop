@@ -1,4 +1,4 @@
 streamlit
-openai-whisper # This is the correct library for OpenAI's Whisper model
+openai-whisper
 moviepy
 numpy

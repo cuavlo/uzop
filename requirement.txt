@@ -1,4 +1,2 @@
 streamlit
-openai-whisper
-moviepy
-numpy
+Pillow # Note: The package name is 'Pillow', not 'PIL'

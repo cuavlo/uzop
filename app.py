@@ -6,7 +6,121 @@ from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip, vfx
 import random
 import string
 import shutil
-import numpy as np # For potential future image processing, useful with MoviePy sometimes
+import numpy as np # For potential future image processing, useful with MoviePy sometimesimport streamlit as st
+from PIL import Image, ImageDraw, ImageFont
+import io
+import os
+
+st.set_page_config(page_title="PixelPy - Pixellab Alternative", layout="centered")
+
+st.title("🎨 PixelPy - Your Simple Image Editor")
+st.markdown("Upload an image, add text, and download your creation!")
+
+# --- Session State Initialization ---
+if 'original_image_bytes' not in st.session_state:
+    st.session_state.original_image_bytes = None
+if 'processed_image_bytes' not in st.session_state:
+    st.session_state.processed_image_bytes = None
+if 'uploaded_file_name' not in st.session_state:
+    st.session_state.uploaded_file_name = "output_image.png"
+
+# --- Image Upload ---
+uploaded_file = st.file_uploader("Choose an image file", type=["png", "jpg", "jpeg", "webp"])
+
+if uploaded_file is not None:
+    # Read the image bytes once and store in session state
+    st.session_state.original_image_bytes = uploaded_file.getvalue()
+    st.session_state.uploaded_file_name = uploaded_file.name
+    # Clear processed image bytes if a new image is uploaded
+    st.session_state.processed_image_bytes = None
+
+# --- Image Processing & Display ---
+if st.session_state.original_image_bytes is not None:
+    original_image = Image.open(io.BytesIO(st.session_state.original_image_bytes)).convert("RGBA")
+    
+    st.subheader("Add Text to Your Image")
+
+    # Text Input
+    text_input = st.text_area("Enter text to add:", "Hello, PixelPy!")
+
+    # Font Size Slider
+    font_size = st.slider("Font Size", 10, 200, 50)
+
+    # Text Color Picker
+    text_color = st.color_picker("Text Color", "#FFFFFF") # Default white
+
+    # Text Position Sliders (relative to image dimensions for responsiveness)
+    img_width, img_height = original_image.size
+    
+    pos_x_percent = st.slider("Text Position X (%)", 0, 100, 50)
+    pos_y_percent = st.slider("Text Position Y (%)", 0, 100, 50)
+
+    # Convert percentage to pixel coordinates
+    text_x = int(img_width * pos_x_percent / 100)
+    text_y = int(img_height * pos_y_percent / 100)
+
+    # --- Apply Text Button ---
+    if st.button("Apply Text"):
+        processed_image = original_image.copy()
+        draw = ImageDraw.Draw(processed_image)
+
+        # Attempt to load a default font (Streamlit Cloud usually has common fonts)
+        # You might need to specify a path to a .ttf file for more control
+        try:
+            # Using a generic font that should be available on most systems/Streamlit Cloud
+            font = ImageFont.truetype("arial.ttf", font_size) 
+        except IOError:
+            st.warning("Could not find 'arial.ttf'. Using default PIL font (may not scale well).")
+            font = ImageFont.load_default()
+            font_size = 16 # Reset font size for default font as it doesn't scale with number
+
+        # Calculate text bounding box to center text if needed
+        # xy=(x,y), anchor="ms" means (x,y) is the middle-bottom of the text
+        # xy=(x,y), anchor="mm" means (x,y) is the middle-middle of the text
+        
+        # Draw the text with a black outline for better visibility
+        outline_color = (0, 0, 0) # Black
+        outline_width = 2
+        
+        for x_offset in range(-outline_width, outline_width + 1):
+            for y_offset in range(-outline_width, outline_width + 1):
+                if x_offset != 0 or y_offset != 0: # Don't draw main text again
+                    draw.text((text_x + x_offset, text_y + y_offset), text_input, font=font, fill=outline_color, anchor="mm")
+
+        # Draw the main text
+        draw.text((text_x, text_y), text_input, font=font, fill=text_color, anchor="mm")
+
+
+        # Convert processed image back to bytes for storage and download
+        buffered = io.BytesIO()
+        processed_image.save(buffered, format="PNG") # Save as PNG to support transparency
+        st.session_state.processed_image_bytes = buffered.getvalue()
+        st.success("Text applied successfully! See preview below.")
+
+    # --- Display Preview ---
+    if st.session_state.processed_image_bytes is not None:
+        st.subheader("Preview")
+        st.image(st.session_state.processed_image_bytes, caption="Your edited image", use_column_width=True)
+
+        # --- Download Button ---
+        st.download_button(
+            label="Download Edited Image",
+            data=st.session_state.processed_image_bytes,
+            file_name=f"pixelpy_{st.session_state.uploaded_file_name}",
+            mime="image/png"
+        )
+    else:
+        st.subheader("Original Image Preview")
+        st.image(st.session_state.original_image_bytes, caption="Original Image", use_column_width=True)
+
+else:
+    st.info("Upload an image to start editing!")
+
+st.markdown("---")
+st.markdown("### How this works:")
+st.markdown("- Uses `Streamlit` for the web interface.")
+st.markdown("- Uses `Pillow` (PIL) for image manipulation.")
+st.markdown("- **Note:** This is a basic example. Pixellab offers many more advanced features (3D text, shapes, effects, etc.) which would require significantly more complex code.")
 
 st.set_page_config(page_title="AI Clip Generator", layout="wide")
 
